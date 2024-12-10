@@ -125,6 +125,7 @@ class Node extends EventDispatcher {
 	 *
 	 * @type {Boolean}
 	 * @default false
+	 * @param {boolean} value
 	 */
 	set needsUpdate( value ) {
 
@@ -333,7 +334,6 @@ class Node extends EventDispatcher {
 	 * Generate a custom cache key for this node.
 	 *
 	 * @return {Number} The cache key of the node.
-	 * @default 0
 	 */
 	customCacheKey() {
 
@@ -533,6 +533,7 @@ class Node extends EventDispatcher {
 	 * The method can be implemented to update the node's internal state before it is used to render an object.
 	 * The {@link Node#updateBeforeType} property defines how often the update is executed.
 	 *
+	 * @abstract
 	 * @param {NodeFrame} frame - A reference to the current node frame.
 	 * @return {Boolean?} An optional bool that indicates whether the implementation actually performed an update or not (e.g. due to caching).
 	 */
@@ -546,6 +547,7 @@ class Node extends EventDispatcher {
 	 * The method can be implemented to update the node's internal state after it was used to render an object.
 	 * The {@link Node#updateAfterType} property defines how often the update is executed.
 	 *
+	 * @abstract
 	 * @param {NodeFrame} frame - A reference to the current node frame.
 	 * @return {Boolean?} An optional bool that indicates whether the implementation actually performed an update or not (e.g. due to caching).
 	 */
@@ -559,6 +561,7 @@ class Node extends EventDispatcher {
 	 * The method can be implemented to update the node's internal state when it is used to render an object.
 	 * The {@link Node#updateType} property defines how often the update is executed.
 	 *
+	 * @abstract
 	 * @param {NodeFrame} frame - A reference to the current node frame.
 	 * @return {Boolean?} An optional bool that indicates whether the implementation actually performed an update or not (e.g. due to caching).
 	 */
