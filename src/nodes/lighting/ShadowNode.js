@@ -1,4 +1,4 @@
-import ShadowBaseNode, { shadowWorldPosition } from './ShadowBaseNode.js';
+import ShadowBaseNode, { shadowPositionWorld } from './ShadowBaseNode.js';
 import { float, vec2, vec3, vec4, If, int, Fn, nodeObject } from '../tsl/TSLBase.js';
 import { reference } from '../accessors/ReferenceNode.js';
 import { texture } from '../accessors/TextureNode.js';
@@ -548,7 +548,7 @@ class ShadowNode extends ShadowBaseNode {
 		const shadowIntensity = reference( 'intensity', 'float', shadow ).setGroup( renderGroup );
 		const normalBias = reference( 'normalBias', 'float', shadow ).setGroup( renderGroup );
 
-		const shadowPosition = lightShadowMatrix( light ).mul( shadowWorldPosition.add( transformedNormalWorld.mul( normalBias ) ) );
+		const shadowPosition = lightShadowMatrix( light ).mul( shadowPositionWorld.add( transformedNormalWorld.mul( normalBias ) ) );
 		const shadowCoord = this.setupShadowCoord( builder, shadowPosition );
 
 		//
@@ -662,11 +662,20 @@ class ShadowNode extends ShadowBaseNode {
 		const currentRenderObjectFunction = renderer.getRenderObjectFunction();
 		const currentMRT = renderer.getMRT();
 
+		const useVelocity = currentMRT ? currentMRT.has( 'velocity' ) : false;
+
 		renderer.setMRT( null );
 
 		renderer.setRenderObjectFunction( ( object, scene, _camera, geometry, material, group, ...params ) => {
 
 			if ( object.castShadow === true || ( object.receiveShadow && shadowType === VSMShadowMap ) ) {
+
+				if ( useVelocity ) {
+
+					object.userData = object.userData || {};
+					object.userData.useVelocity = true;
+
+				}
 
 				object.onBeforeShadow( renderer, object, camera, shadow.camera, geometry, scene.overrideMaterial, group );
 
