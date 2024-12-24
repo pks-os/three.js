@@ -1003,7 +1003,7 @@ class Renderer {
 	 * Renders the given render bundle.
 	 *
 	 * @private
-	 * @param {RenderBundle} bundle - The render bundle.
+	 * @param {Object} bundle - Render bundle data.
 	 * @param {Scene} sceneRef - The scene the render bundle belongs to.
 	 * @param {LightsNode} lightsNode - The current lights node.
 	 */
@@ -1836,17 +1836,26 @@ class Renderer {
 
 		const renderTarget = this._renderTarget || this._getFrameBufferTarget();
 
-		let renderTargetData = null;
+		let renderContext = null;
 
 		if ( renderTarget !== null ) {
 
 			this._textures.updateRenderTarget( renderTarget );
 
-			renderTargetData = this._textures.get( renderTarget );
+			const renderTargetData = this._textures.get( renderTarget );
+
+			renderContext = this._renderContexts.get( null, null, renderTarget );
+			renderContext.textures = renderTargetData.textures;
+			renderContext.depthTexture = renderTargetData.depthTexture;
+			renderContext.width = renderTargetData.width;
+			renderContext.height = renderTargetData.height;
+			renderContext.renderTarget = renderTarget;
+			renderContext.depth = renderTarget.depthBuffer;
+			renderContext.stencil = renderTarget.stencilBuffer;
 
 		}
 
-		this.backend.clear( color, depth, stencil, renderTargetData );
+		this.backend.clear( color, depth, stencil, renderContext );
 
 		if ( renderTarget !== null && this._renderTarget === null ) {
 
@@ -2508,7 +2517,7 @@ class Renderer {
 	 * Renders the given render bundles.
 	 *
 	 * @private
-	 * @param {Array<RenderBundle>} bundles - The render bundles.
+	 * @param {Array<Object>} bundles - Array with render bundle data.
 	 * @param {Scene} sceneRef - The scene the render bundles belong to.
 	 * @param {LightsNode} lightsNode - The current lights node.
 	 */
