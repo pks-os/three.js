@@ -410,7 +410,7 @@ class WebGLBackend extends Backend {
 	 */
 	beginRender( renderContext ) {
 
-		const { gl } = this;
+		const { state, gl } = this;
 		const renderContextData = this.get( renderContext );
 
 		//
@@ -433,7 +433,7 @@ class WebGLBackend extends Backend {
 
 		} else {
 
-			gl.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
+			state.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
 
 		}
 
@@ -441,7 +441,7 @@ class WebGLBackend extends Backend {
 
 			const { x, y, width, height } = renderContext.scissorValue;
 
-			gl.scissor( x, renderContext.height - height - y, width, height );
+			state.scissor( x, renderContext.height - height - y, width, height );
 
 		}
 
@@ -565,7 +565,7 @@ class WebGLBackend extends Backend {
 
 			} else {
 
-				gl.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
+				state.viewport( 0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight );
 
 			}
 
@@ -663,10 +663,10 @@ class WebGLBackend extends Backend {
 	 */
 	updateViewport( renderContext ) {
 
-		const gl = this.gl;
+		const { state } = this;
 		const { x, y, width, height } = renderContext.viewportValue;
 
-		gl.viewport( x, renderContext.height - height - y, width, height );
+		state.viewport( x, renderContext.height - height - y, width, height );
 
 	}
 
@@ -677,17 +677,9 @@ class WebGLBackend extends Backend {
 	 */
 	setScissorTest( boolean ) {
 
-		const gl = this.gl;
+		const state = this.state;
 
-		if ( boolean ) {
-
-			gl.enable( gl.SCISSOR_TEST );
-
-		} else {
-
-			gl.disable( gl.SCISSOR_TEST );
-
-		}
+		state.setScissorTest( boolean );
 
 	}
 
@@ -1043,31 +1035,101 @@ class WebGLBackend extends Backend {
 
 		}
 
-		if ( object.isBatchedMesh ) {
+		const draw = () => {
 
-			if ( object._multiDrawInstances !== null ) {
+			if ( object.isBatchedMesh ) {
 
-				renderer.renderMultiDrawInstances( object._multiDrawStarts, object._multiDrawCounts, object._multiDrawCount, object._multiDrawInstances );
+				if ( object._multiDrawInstances !== null ) {
 
-			} else if ( ! this.hasFeature( 'WEBGL_multi_draw' ) ) {
+					renderer.renderMultiDrawInstances( object._multiDrawStarts, object._multiDrawCounts, object._multiDrawCount, object._multiDrawInstances );
 
-				warnOnce( 'THREE.WebGLRenderer: WEBGL_multi_draw not supported.' );
+				} else if ( ! this.hasFeature( 'WEBGL_multi_draw' ) ) {
+
+					warnOnce( 'THREE.WebGLRenderer: WEBGL_multi_draw not supported.' );
+
+				} else {
+
+					renderer.renderMultiDraw( object._multiDrawStarts, object._multiDrawCounts, object._multiDrawCount );
+
+				}
+
+			} else if ( instanceCount > 1 ) {
+
+				renderer.renderInstances( firstVertex, vertexCount, instanceCount );
 
 			} else {
 
-				renderer.renderMultiDraw( object._multiDrawStarts, object._multiDrawCounts, object._multiDrawCount );
+				renderer.render( firstVertex, vertexCount );
 
 			}
 
-		} else if ( instanceCount > 1 ) {
+		};
 
-			renderer.renderInstances( firstVertex, vertexCount, instanceCount );
+		if ( renderObject.camera.isArrayCamera ) {
+
+			const cameraData = this.get( renderObject.camera );
+			const cameras = renderObject.camera.cameras;
+
+			if ( cameraData.indexesGPU === undefined ) {
+
+				const data = new Uint32Array( [ 0, 0, 0, 0 ] );
+				const indexesGPU = [];
+
+				for ( let i = 0, len = cameras.length; i < len; i ++ ) {
+
+					const bufferGPU = gl.createBuffer();
+
+					data[ 0 ] = i;
+
+					gl.bindBuffer( gl.UNIFORM_BUFFER, bufferGPU );
+					gl.bufferData( gl.UNIFORM_BUFFER, data, gl.DYNAMIC_DRAW );
+
+					indexesGPU.push( bufferGPU );
+
+				}
+
+				cameraData.indexesGPU = indexesGPU; // TODO: Create a global library for this
+				cameraData.cameraIndex = renderObject.getBindingGroup( 'cameraIndex' ).bindings[ 0 ];
+
+			}
+
+			const cameraIndexData = this.get( cameraData.cameraIndex );
+			const pixelRatio = this.renderer.getPixelRatio();
+
+			for ( let i = 0, len = cameras.length; i < len; i ++ ) {
+
+				const subCamera = cameras[ i ];
+
+				if ( object.layers.test( subCamera.layers ) ) {
+
+					const vp = subCamera.viewport;
+
+					const x = vp.x * pixelRatio;
+					const y = vp.y * pixelRatio;
+					const width = vp.width * pixelRatio;
+					const height = vp.height * pixelRatio;
+
+					state.viewport(
+						Math.floor( x ),
+						Math.floor( renderObject.context.height - height - y ),
+						Math.floor( width ),
+						Math.floor( height )
+					);
+
+					state.bindBufferBase( gl.UNIFORM_BUFFER, cameraIndexData.index, cameraData.indexesGPU[ i ] );
+
+					draw();
+
+				}
+
+			}
 
 		} else {
 
-			renderer.render( firstVertex, vertexCount );
+			draw();
 
 		}
+
 		//
 
 		gl.bindVertexArray( null );
