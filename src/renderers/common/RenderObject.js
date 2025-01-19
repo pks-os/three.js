@@ -1,4 +1,4 @@
-import { hashString } from '../../nodes/core/NodeUtils.js';
+import { hash, hashString } from '../../nodes/core/NodeUtils.js';
 
 let _id = 0;
 
@@ -361,7 +361,7 @@ class RenderObject {
 	 */
 	getMonitor() {
 
-		return this._monitor || ( this._monitor = this.getNodeBuilderState().monitor );
+		return this._monitor || ( this._monitor = this.getNodeBuilderState().observer );
 
 	}
 
@@ -770,9 +770,15 @@ class RenderObject {
 
 		}
 
+		if ( this.camera.isArrayCamera ) {
+
+			cacheKey = hash( cacheKey, this.camera.cameras.length );
+
+		}
+
 		if ( this.object.receiveShadow ) {
 
-			cacheKey += 1;
+			cacheKey = hash( cacheKey, 1 );
 
 		}
 
